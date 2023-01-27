@@ -5,14 +5,15 @@ namespace App\Controller\Application;
 use App\Attributes\ImportExportAttribute;
 use App\Attributes\ImportProcessorAttribute;
 use App\Constants\PhpSpreadsheetConstants;
+use App\Entity\Brand;
 use App\Entity\Store;
+use App\Enums\StoreStatus;
 use App\Services\ExportService;
 use App\Services\FileUploadService;
 use App\Services\ImportService;
 use App\Services\StoreService;
 use App\ViewModels\StoreViewModel;
 use App\ViewModels\UserViewModel;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
@@ -265,52 +266,12 @@ class StoreController extends BaseVueController
      */
     #[Route('/api/stores/import/process', name: 'api_store_process_import', methods: 'POST')]
     public function import(Request $request, ValidatorInterface $validator): StreamedResponse|JsonResponse {
-
-
         $folder = $request->get('folder');
         $fileName = $request->get('fileName');
         $filePath = FileUploadService::CONTENT_PATH . "/temp-uploads/$folder/$fileName";
 
-        $importService = new ImportService();
-        $document = $importService->loadDocument($filePath);
-        $worksheets = $document->iterateSheets();
-
-        $entityManager = EntityManagerInterface::class;
-        $store = new Store();
-        $storePropertyIdentity = StoreController::extractImportExportAttributeInformation();
-
-        for ($i = 0; $i <= count($document->getSheetNames()); $i++) {
-            $k = 0;
-            foreach ($document->toIterator($i) as $row) {
-                $setter = $storePropertyIdentity[$k]['setterFunction'];
-                $value = $row[$storePropertyIdentity[$k]['columnName']];
-                $store->$setter($value);
-            
-                $errors = $validator->validate($store);
-                if (count($errors) > 0) {
-                    /*
-                     * Uses a __toString method on the $errors variable which is a
-                     * ConstraintViolationList object. This gives us a nice string
-                     * for debugging.
-                     */
-                    $errorsString = (string) $errors;
-            
-                    // return new Response($errorsString);
-                }
-                
-                //     $entityManager->persist($store);
-
-                //     $entityManager->flush();
-                // }
-
-                $k++;
-                
-            }
-        }
-
-        return $this->json(["Its A boy"], Response::HTTP_I_AM_A_TEAPOT);
-
         // TODO: read file and process import
 
+        return $this->json([]);
     }
 }
