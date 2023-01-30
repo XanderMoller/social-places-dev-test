@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Entity\Brand;
+use App\Enums\StoreStatus;
 use Doctrine\ORM\EntityManagerInterface;
 
 class StoreService
@@ -21,5 +22,14 @@ class StoreService
         }
 
         return $brand;
+    }
+
+    public static function mapStringToStoreStatus(string $statusString): StoreStatus {
+      foreach(StoreStatus::cases() as $case) {
+        if ($case == $statusString) {
+          return StoreStatus::tryFrom($case->name) ?? StoreStatus::REQUIRES_ADMIN_INTERVENTION;
+        }
+      }
+        return StoreStatus::REQUIRES_ADMIN_INTERVENTION;
     }
 }

@@ -42,6 +42,7 @@ class Store
 
     #[ORM\Column(type: 'integer', nullable: false, enumType: StoreStatus::class)]
     #[ImportExportAttribute(getter: 'getStatusName', setter: 'setStatusFromName')]
+    // #[ImportProcessorAttribute('mapStringToStoreStatus', 'storeService')]
     private StoreStatus $status;
 
     #[ORM\Column(type: 'string', length: 50, unique: true, nullable: false)]
@@ -188,7 +189,9 @@ class Store
     }
 
     public function setStatusFromName(string $statusName): void {
-        $this->status = StoreStatus::fromName($statusName);
+
+        $this->status = StoreService::mapStringToStoreStatus($statusName);
+        // $this->status = StoreStatus::fromName($statusName) ?? StoreStatus::REQUIRES_ADMIN_INTERVENTION;
     }
 
     public function getApiId(): string {

@@ -5,15 +5,14 @@ namespace App\Controller\Application;
 use App\Attributes\ImportExportAttribute;
 use App\Attributes\ImportProcessorAttribute;
 use App\Constants\PhpSpreadsheetConstants;
-use App\Entity\Brand;
 use App\Entity\Store;
-use App\Enums\StoreStatus;
 use App\Services\ExportService;
 use App\Services\FileUploadService;
 use App\Services\ImportService;
 use App\Services\StoreService;
 use App\ViewModels\StoreViewModel;
 use App\ViewModels\UserViewModel;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
@@ -31,6 +30,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Constraints\Unique;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class StoreController extends BaseVueController
@@ -243,7 +243,7 @@ class StoreController extends BaseVueController
 
             $isIdentifier = $importExportAttribute->getIsIdentifierField();
 
-            $extractedProperties[] = compact('columnName', 'propertyName', 'getterFunction', 'setterFunction', 'dbColumnName', 'isIdentifier', 'exportProcessor','importProcessor');
+            $extractedProperties[$columnName] = compact('columnName', 'propertyName', 'getterFunction', 'setterFunction', 'dbColumnName', 'isIdentifier', 'exportProcessor','importProcessor');
         }
         return $extractedProperties;
     }
@@ -262,16 +262,71 @@ class StoreController extends BaseVueController
      * Validation should use default entity validation (already existing - in part)
      * Compromise on one field that may not ever change to be the identifier, noting the name may change in the provided export
      *
-     * Feel free to update any supporting code to the table to help speed things up
+     * Feel free to update any supporting code to the table to help speed things up 
      */
     #[Route('/api/stores/import/process', name: 'api_store_process_import', methods: 'POST')]
     public function import(Request $request, ValidatorInterface $validator): StreamedResponse|JsonResponse {
+
         $folder = $request->get('folder');
         $fileName = $request->get('fileName');
         $filePath = FileUploadService::CONTENT_PATH . "/temp-uploads/$folder/$fileName";
 
-        // TODO: read file and process import
+        $importService = new ImportService();
+        $document = $importService->loadDocument($filePath);
 
-        return $this->json([]);
+        $storePropertyIdentity = StoreController::extractImportExportAttributeInformation();
+        $batchSize = 20;
+        $errorsString = '';
+        $metaStore = $this->entityManager->getClassMetadata(Store::class);
+        for ($sheetIterator = 0; $sheetIterator < count($document->getSheetNames()); $sheetIterator++) {
+            $rowPersisted = 0;
+            foreach ($document->toIterator($sheetIterator) as $row) {
+                $store = new Store();
+
+                foreach ($row as $key => $value) {
+                    if (!array_key_exists($key, $storePropertyIdentity)) {
+                        break;
+                    }
+
+                    $propertyIdentity = $storePropertyIdentity[$key];
+                    if ((   $metaStore->fieldMappings[$propertyIdentity['propertyName']]['unique'] ?? false) && 
+                            $metaStore->hasField($propertyIdentity['dbColumnName']) && 
+                            ($this->entityManager->getRepository(Store::class)->count([$propertyIdentity['dbColumnName'] => $value]) > 0)) 
+                    {
+                            break 1;
+                    }
+    
+                    $setter = $propertyIdentity['setterFunction'];
+
+                    $value = $propertyIdentity['importProcessor'] ? $propertyIdentity['importProcessor']($this, $value) : $value;
+
+                    $store->$setter($value);
+                }
+                $errors = $validator->validate($store);
+                $errorsPresent = count($errors) > 0;
+                if ($errorsPresent) {
+                    /*
+                     * Uses a __toString method on the $errors variable which is a
+                     * ConstraintViolationList object. This gives us a nice string
+                     * for debugging.
+                     */
+                    $errorsString .= (string) $errors;
+                }
+
+                if (!$this->entityManager->contains($store) && !$errorsPresent) {
+                    $this->entityManager->persist($store);
+                    $rowPersisted++;
+                }
+                if (($rowPersisted % $batchSize) === 0) {
+                    $this->entityManager->flush();
+                    $this->entityManager->clear(); // Detaches all objects from Doctrine!
+                }
+            }
+
+        }
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+        //TODO Visualise error OR rejected rows (Return Document with rejected rows or spit our errorString)
+        return $this->json([$errorsString], Response::HTTP_OK);
     }
 }
