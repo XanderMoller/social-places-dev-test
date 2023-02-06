@@ -162,8 +162,6 @@ class StoreController extends BaseVueController
         }
 
         $exportService->applyStyleToRow(1, array_merge(PhpSpreadsheetConstants::HEADING, PhpSpreadsheetConstants::HEADING_FILL));
-        dd("asdasdasdasd");
-        return $this->json([]);
         $exportService->applyAutoWidth(1);
         $document = $exportService->generateDocument();
         return ExportService::generateResponse($document, 'Export');
