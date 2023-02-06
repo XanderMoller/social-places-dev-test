@@ -2,6 +2,7 @@ import Vue from 'vue';
 import VueRouter from 'vue-router';
 const RouterEntry = () => import ('~/views/RouterEntry');
 const LoginIndex = () => import ('~/views/LoginIndex');
+const ContactIndex = () => import ('~/views/contacts/ContactIndex');
 const ApplicationEntry = () => import ('~/views/ApplicationEntry');
 const PublicEntry = () => import ('~/views/PublicEntry');
 const DashboardIndex = () => import ('~/views/DashboardIndex');
@@ -38,6 +39,22 @@ const router = new VueRouter({
                             name: 'Login',
                             meta: {
                                 title: 'Social Places | Login'
+                            }
+                        }
+                    ]
+                },
+                {
+                    path: '',
+                    component: PublicEntry,
+                    name: 'Public Entry',
+                    redirect: 'contact',
+                    children: [
+                        {
+                            path: 'contact',
+                            component: ContactIndex,
+                            name: 'Contact',
+                            meta: {
+                                title: 'Social Places | Contact'
                             }
                         }
                     ]

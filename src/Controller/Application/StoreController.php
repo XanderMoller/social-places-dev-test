@@ -134,6 +134,7 @@ class StoreController extends BaseVueController
 
         $attributeInformation = $this->extractImportExportAttributeInformation();
 
+
         $query = $this->entityManager->createQuery($exportQb->getDQL());
         sp_dql_apply_other_parameters($exportQb, $query);
         $exportService = (new ExportService())
@@ -156,10 +157,13 @@ class StoreController extends BaseVueController
                     $value = $exportProcessor($value);
                 }
                 $rowValues[] = $value;
-            }
+            } 
             $exportService->writeRow($rowValues, $counter);
         }
+
         $exportService->applyStyleToRow(1, array_merge(PhpSpreadsheetConstants::HEADING, PhpSpreadsheetConstants::HEADING_FILL));
+        dd("asdasdasdasd");
+        return $this->json([]);
         $exportService->applyAutoWidth(1);
         $document = $exportService->generateDocument();
         return ExportService::generateResponse($document, 'Export');
@@ -273,5 +277,21 @@ class StoreController extends BaseVueController
         // TODO: read file and process import
 
         return $this->json([]);
+    }
+
+    #[Route('/api/stores/{storeName}', name: 'api_stores_string_query', methods: 'GET')]
+    public function getStoresStringQuery(Request $request, ?String $storeName = null): JsonResponse {
+        $queryString = $request->query->get('input');
+        if (!$queryString) {
+            return $this->json(['stores' => ['NMonasdasd']]);
+        }
+
+        $result = $this->entityManager->getRepository(Store::class)->createQueryBuilder(StoreViewModel::ALIAS)
+                ->select(StoreViewModel::ALIAS.'.id',StoreViewModel::ALIAS.'.name')
+                ->where("s.name LIKE '%".$queryString."%'")
+                ->getQuery()
+                ->getResult();
+
+        return $this->json(['stores' => [$result]]);
     }
 }

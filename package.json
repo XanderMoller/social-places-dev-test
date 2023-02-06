@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.0",
+    "@trevoreyre/autocomplete-vue": "^2.4.1",
     "axios": "^0.27.2",
     "luxon": "^2.4.0",
     "vue-file-agent": "^1.7.3",

@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\User;
+use App\ViewModels\UserViewModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
@@ -54,5 +55,14 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $user->setPassword($newHashedPassword);
 
         $this->add($user, true);
+    }
+
+    public function findUsersByRole($role){
+        $qb = $this->createQueryBuilder(UserViewModel::ALIAS);
+        $qb->select(UserViewModel::ALIAS)
+           ->where(UserViewModel::ALIAS.'.roles LIKE :roles')
+           ->setParameter('roles', '%"'.$role.'"%');
+        
+        return $qb->getQuery()->getResult();
     }
 }

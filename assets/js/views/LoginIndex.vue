@@ -45,14 +45,25 @@
                                 @input="logInError = null"
                                 @keydown.enter="logIn"/>
                         </v-form>
+                        
                     </v-card-text>
                     <div class="d-flex justify-end">
                         <v-btn :loading="loading" color="primary" text @click="logIn">Log In</v-btn>
+                        <v-btn :loading="loading" color="primary" text @click="routeToContactPage">Create Contact</v-btn>
+
+                        <!-- <v-btn
+                height="40"
+                icon
+                width="40"
+                @click="routeToContactPage">
+                <v-icon color="primary">fas fa-phone</v-icon>
+            </v-btn> -->
                     </div>
                 </v-card>
             </div>
         </div>
     </div>
+
 </template>
 
 <script>
@@ -90,6 +101,9 @@ export default {
                 this.loading = false;
             }
         },
+        routeToContactPage() {
+            this.$router.push('contact');
+        }
     },
 }
 </script>
