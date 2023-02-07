@@ -152,10 +152,6 @@ class StoreController extends BaseVueController
             $rowValues = [];
             foreach ($attributeInformation as ['getterFunction' => $getterFunction, 'exportProcessor' => $exportProcessor]) {
                 $value = $row->{$getterFunction}();
-
-                dd($row->getFacebookId());
-        return $this->json([]);
-
                 if ($exportProcessor !== null) {
                     $value = $exportProcessor($value);
                 }
