@@ -94,7 +94,8 @@ class ExportService
                 ++$position;
             }
             $column = Coordinate::stringFromColumnIndex($position);
-            $worksheet->setCellValueExplicit("$column$start", $item, DataType::TYPE_STRING);
+            $worksheet->setCellValueExplicit("$column$start", $item ?? '', DataType::TYPE_STRING);
+
             if ($shouldWrap) {
                 $worksheet->getStyle("$column$start")->getAlignment()->setWrapText(true);
             }

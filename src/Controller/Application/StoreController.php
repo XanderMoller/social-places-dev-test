@@ -144,7 +144,7 @@ class StoreController extends BaseVueController
             ->applyFromArray(PhpSpreadsheetConstants::DEFAULT_FONT)
             ->getAlignment()
             ->setWrapText(true);
-        $counter = 1;
+        $counter = 0;
         $iterator = $query->toIterable();
         $exportService->writeRow(array_column($attributeInformation, 'columnName'));
         foreach ($iterator as $row) {
