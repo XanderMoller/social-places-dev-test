@@ -243,7 +243,7 @@ class StoreController extends BaseVueController
 
             $isIdentifier = $importExportAttribute->getIsIdentifierField();
 
-            $extractedProperties[$columnName] = compact('columnName', 'propertyName', 'getterFunction', 'setterFunction', 'dbColumnName', 'isIdentifier', 'exportProcessor','importProcessor');
+            $extractedProperties[] = compact('columnName', 'propertyName', 'getterFunction', 'setterFunction', 'dbColumnName', 'isIdentifier', 'exportProcessor','importProcessor');
         }
         return $extractedProperties;
     }
@@ -275,54 +275,35 @@ class StoreController extends BaseVueController
         $document = $importService->loadDocument($filePath);
 
         $storePropertyIdentity = StoreController::extractImportExportAttributeInformation();
+
         $batchSize = 20;
         $errorsString = '';
-        $metaStore = $this->entityManager->getClassMetadata(Store::class);
-        for ($sheetIterator = 0; $sheetIterator < count($document->getSheetNames()); $sheetIterator++) {
-            $rowPersisted = 0;
-            foreach ($document->toIterator($sheetIterator) as $row) {
-                $store = new Store();
-
-                foreach ($row as $key => $value) {
-                    if (!array_key_exists($key, $storePropertyIdentity)) {
-                        break;
-                    }
-
-                    $propertyIdentity = $storePropertyIdentity[$key];
-                    if ((   $metaStore->fieldMappings[$propertyIdentity['propertyName']]['unique'] ?? false) && 
-                            $metaStore->hasField($propertyIdentity['dbColumnName']) && 
-                            ($this->entityManager->getRepository(Store::class)->count([$propertyIdentity['dbColumnName'] => $value]) > 0)) 
-                    {
-                            break 1;
-                    }
+        $rowPersisted = 0;
+        foreach ($document->toIterator() as $row) {
+            $store = new Store();
     
-                    $setter = $propertyIdentity['setterFunction'];
+            foreach ($storePropertyIdentity as ['columnName' => $columnName, 'setterFunction' => $setterFunction, 'importProcessor' => $importProcessor]) {
+                $value = $row[$columnName];
+                if ($importProcessor !== null) {
+                    $value = $importProcessor($this,$value);
+                }
+                $store->{$setterFunction}($value);
 
-                    $value = $propertyIdentity['importProcessor'] ? $propertyIdentity['importProcessor']($this, $value) : $value;
+            }
+            $errors = $validator->validate($store);
+            $errorsPresent = count($errors) > 0;
 
-                    $store->$setter($value);
-                }
-                $errors = $validator->validate($store);
-                $errorsPresent = count($errors) > 0;
-                if ($errorsPresent) {
-                    /*
-                     * Uses a __toString method on the $errors variable which is a
-                     * ConstraintViolationList object. This gives us a nice string
-                     * for debugging.
-                     */
-                    $errorsString .= (string) $errors;
-                }
-
-                if (!$this->entityManager->contains($store) && !$errorsPresent) {
-                    $this->entityManager->persist($store);
-                    $rowPersisted++;
-                }
-                if (($rowPersisted % $batchSize) === 0) {
-                    $this->entityManager->flush();
-                    $this->entityManager->clear(); // Detaches all objects from Doctrine!
-                }
+            if ($errorsPresent) {
+                $errorsString .= (string) $errors;
+            } else {
+                $this->entityManager->persist($store);
+                $rowPersisted++;
             }
 
+            if (($rowPersisted % $batchSize) === 0) {
+                $this->entityManager->flush();
+                $this->entityManager->clear();
+            }
         }
         $this->entityManager->flush();
         $this->entityManager->clear();
