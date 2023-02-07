@@ -144,7 +144,7 @@ class StoreController extends BaseVueController
             ->applyFromArray(PhpSpreadsheetConstants::DEFAULT_FONT)
             ->getAlignment()
             ->setWrapText(true);
-        $counter = 0;
+        $counter = 1;
         $iterator = $query->toIterable();
         $exportService->writeRow(array_column($attributeInformation, 'columnName'));
         foreach ($iterator as $row) {
@@ -152,6 +152,10 @@ class StoreController extends BaseVueController
             $rowValues = [];
             foreach ($attributeInformation as ['getterFunction' => $getterFunction, 'exportProcessor' => $exportProcessor]) {
                 $value = $row->{$getterFunction}();
+
+                dd($row->getFacebookId());
+        return $this->json([]);
+
                 if ($exportProcessor !== null) {
                     $value = $exportProcessor($value);
                 }
